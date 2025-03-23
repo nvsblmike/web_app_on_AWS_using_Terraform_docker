@@ -62,6 +62,7 @@ jobs:
           username: ubuntu
           port: 22
           script: |
-            cd /home/ubuntu/ansible-playbooks
+            cd ~
             echo "Running Ansible playbook..."
-            ansible-playbook -i hosts.ini deploy_ec2.yaml --extra-vars "image_tag=${{ env.IMAGE_TAG }}"
+            echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > vault_pass.txt
+            ansible-playbook -i hosts.ini deploy_ec2.yaml vault_pass.txt --extra-vars "image_tag=${{ env.IMAGE_TAG }}"
