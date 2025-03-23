@@ -64,4 +64,4 @@ jobs:
           script: |
             cd /home/ubuntu/ansible-playbooks
             echo "Running Ansible playbook..."
-            ansible-playbook deploy_ec2.yaml --extra-vars "image_tag=${{ env.IMAGE_TAG }}"
+            ansible-playbook -i hosts.ini deploy_ec2.yaml --extra-vars "image_tag=${{ env.IMAGE_TAG }}"
