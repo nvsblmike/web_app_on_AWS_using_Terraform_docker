@@ -65,4 +65,4 @@ jobs:
             cd ~
             echo "Running Ansible playbook..."
             echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > vault_pass.txt
-            ansible-playbook -i hosts.ini deploy_ec2.yaml vault_pass.txt --extra-vars "image_tag=${{ env.IMAGE_TAG }}"
+            ansible-playbook -i hosts.ini deploy_ec2.yaml --vault-password-file vault_pass.txt --extra-vars "image_tag=${{ env.IMAGE_TAG }}"

@@ -1,20 +1,26 @@
-FROM node:18 AS build
+# Base stage - Build React App
+FROM node:18-alpine AS build
 WORKDIR /app
+
+# Copy package.json and package-lock.json for better caching
 COPY package*.json ./
 
-# Explicitly install dependencies including node-sass-chokidar
-RUN npm install --legacy-peer-deps --force && \
-    npm install node-sass-chokidar --legacy-peer-deps --force && \
-    npm cache clean --force
+# Install dependencies
+RUN npm install
 
+# Copy the source files
 COPY . .
 
-# Ensure node-sass-chokidar runs before build
-RUN npx node-sass-chokidar src/ -o src/ && npm run build
+# Build the React application
+RUN npm run build
 
-# Production stage
+# Final stage - Serve with Nginx
 FROM nginx:1.25.3-alpine
 COPY --from=build /app/build /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/nginx.conf
+
+# Expose port 80 for web traffic
 EXPOSE 80
+
+# Start Nginx server
 CMD ["nginx", "-g", "daemon off;"]
