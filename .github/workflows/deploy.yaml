@@ -3,7 +3,7 @@ name: Deploy to AWS
 on:
   push:
     branches:
-      - deploy_branch
+      - main
 
 jobs:
   build_and_push:
@@ -14,10 +14,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Copy env
-        run: |
-          echo "${{ secrets.ENV_FILE }}" > .env.production
-
       - name: Set up AWS CLI
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -27,8 +23,8 @@ jobs:
 
       - name: Create ECR repository if it does not exist
         run: |
-          aws ecr describe-repositories --repository-names bajaj_hr_frontend_test || \
-          aws ecr create-repository --repository-name bajaj_hr_frontend_test
+          aws ecr describe-repositories --repository-names mcgeorge_app || \
+          aws ecr create-repository --repository-name mcgeorge_app
 
       - name: Login to Amazon ECR
         run: |
@@ -36,56 +32,36 @@ jobs:
           
       - name: Build Docker image
         run: |
-          docker build -t bajaj_hr_frontend_test .
+          docker build -t mcgeorge_app .
 
       - name: Set Image Version
         run: echo "IMAGE_TAG=v${{ github.run_number }}" >> $GITHUB_ENV
       
       - name: Tag Docker image
         run: |
-          docker tag bajaj_hr_frontend_test:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-north-1.amazonaws.com/bajaj_hr_frontend_test:${{ env.IMAGE_TAG }}
+          docker tag mcgeorge_app:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-north-1.amazonaws.com/mcgeorge_app:${{ env.IMAGE_TAG }}
 
       - name: Push Docker image to ECR
         run: |
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-north-1.amazonaws.com/bajaj_hr_frontend_test:${{ env.IMAGE_TAG }}
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-north-1.amazonaws.com/mcgeorge_app:${{ env.IMAGE_TAG }}
 
-  deploy_to_ec2:
-    name: Deploy on EC2
+  deploy_via_ansible:
+    name: Deploy via Ansible Controller
     needs: build_and_push
     runs-on: ubuntu-latest
 
     steps:
-  #     # - name: Set up AWS CLI
-  #     #   uses: aws-actions/configure-aws-credentials@v2
-  #     #   with:
-  #     #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #     #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #     #     aws-region: eu-north-1
-
-      # - name: Read Key from Repo
-      #   id: key_reader
-      #   run: |
-      #     KEY_CONTENT=$(cat ./windows_os.pem)
-      #     echo "KEY_CONTENT<<EOF" >> $GITHUB_ENV
-      #     echo "$KEY_CONTENT" >> $GITHUB_ENV
-      #     echo "EOF" >> $GITHUB_ENV
       - name: Set Image Version
         run: echo "IMAGE_TAG=v${{ github.run_number }}" >> $GITHUB_ENV
 
-      - name: SSH and Deploy
+      - name: SSH into Ansible Controller and run playbook
         uses: appleboy/ssh-action@master
         with:
-          
-          
-          key: ${{ secrets.EC2_SSH_KEY }}
-          host: ${{ secrets.EC2_HOST }}
+          key: ${{ secrets.ANSIBLE_EC2_SSH_KEY }}
+          host: ${{ secrets.ANSIBLE_EC2_HOST }}
           username: ubuntu
           port: 22
           script: |
-            aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-north-1.amazonaws.com
-            docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-north-1.amazonaws.com/bajaj_hr_frontend_test:${{ env.IMAGE_TAG }}
-            docker stop bajaj_hr_frontend_test || true
-            docker rm bajaj_hr_frontend_test || true
-            docker run -d -p 8080:8080 --name bajaj_hr_frontend_test ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-north-1.amazonaws.com/bajaj_hr_frontend_test:${{ env.IMAGE_TAG }}
-
-   
+            cd /home/ubuntu/ansible-playbooks
+            echo "Running Ansible playbook..."
+            ansible-playbook deploy_ec2.yaml --extra-vars "image_tag=${{ env.IMAGE_TAG }}"
