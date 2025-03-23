@@ -44,7 +44,7 @@ node_modules
 .vscode/
 
 # Ignore system files
-# .DS_Store
+# .DSnpm_Store
 Thumbs.db
 
 vpn-cert/
