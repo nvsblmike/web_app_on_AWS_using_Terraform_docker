@@ -11,6 +11,10 @@ RUN npm install
 # Copy the source files
 COPY . .
 
+# COPY ./src/ .
+
+# ADD ./public/ .
+
 # Build the React application
 RUN npm run build
 
